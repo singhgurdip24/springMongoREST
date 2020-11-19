@@ -1,5 +1,7 @@
 package com.codesingh.movies.controller;
 
+import com.codesingh.movies.Exception.MovieCollectionException;
+import com.codesingh.movies.Service.MovieService;
 import com.codesingh.movies.model.Movie;
 import com.codesingh.movies.repository.MovieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,58 +17,50 @@ import java.util.Optional;
 public class MovieController {
 
   @Autowired
-  private MovieRepository movieRepository;
+  private MovieService movieService;
 
   @GetMapping(value = "/movies")
   public ResponseEntity<String> getAllMovies(){
-    List<Movie> movies = movieRepository.findAll();
+    List<Movie> movies = movieService.getAllMovies();
 
-    if(movies.size()!=0) {
-      return new ResponseEntity(movies, HttpStatus.OK);
-    } else {
-      return new ResponseEntity("No movies found", HttpStatus.NOT_FOUND);
-    }
+    return new ResponseEntity(movies, movies.size()>0?HttpStatus.OK:HttpStatus.NOT_FOUND);
   }
 
   @PostMapping(value = "/movies")
   public ResponseEntity<String> createMovie(@RequestBody Movie movie){
     try{
-      movieRepository.save(movie);
+      movieService.createMovie(movie);
       return new ResponseEntity<>("Movie saved successfully "+movie.getTitle(), HttpStatus.OK);
-    } catch (Exception e) {
-      return new ResponseEntity(e.getMessage(),HttpStatus.NOT_FOUND);
+    } catch(ConstraintViolationException e){
+      return new ResponseEntity(e.getMessage(),HttpStatus.UNPROCESSABLE_ENTITY);
+    } catch(MovieCollectionException e) {
+      return new ResponseEntity(e.getMessage(),HttpStatus.CONFLICT);
     }
   }
 
   @PutMapping(value="/movies/{id}")
   public ResponseEntity updateById(@PathVariable("id") String id,@RequestBody Movie newMovie)
   {
-    Optional<Movie> movieOptional =movieRepository.findById(id);
-    if(movieOptional.isPresent())
-    {
-      Movie movieToSave=movieOptional.get();
-      movieToSave.setTitle(newMovie.getTitle());
-      movieToSave.setRating(newMovie.getRating());
-      movieToSave.setGenre(newMovie.getGenre());
-      movieRepository.save(movieToSave);
-      return new ResponseEntity("Updated Movie with id "+id,HttpStatus.OK);
+    try {
+      movieService.updateMovie(id,newMovie);
+      return new ResponseEntity("Updated movie with id "+id+"",HttpStatus.OK);
     }
-    else
+    catch(ConstraintViolationException e)
     {
-      return new ResponseEntity("No Movie with id "+id+" found",HttpStatus.NOT_FOUND);
+      return new ResponseEntity(e.getMessage(),HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+    catch (MovieCollectionException e) {
+      return new ResponseEntity(e.getMessage(),HttpStatus.NOT_FOUND);
     }
   }
 
   @DeleteMapping(value="/movies/{id}")
-  public ResponseEntity deleteMovieById(@PathVariable("id") String id)
-  {
-    try{
-      movieRepository.deleteById(id);
-      return new ResponseEntity("Successfully deleted movie with id "+id,HttpStatus.OK);
-    }
-    catch (Exception e)
-    {
-      return new ResponseEntity(e.getMessage(),HttpStatus.NOT_FOUND);
+  public ResponseEntity deleteMovieById(@PathVariable("id") String id) {
+    try {
+      movieService.deleteMovieById(id);
+      return new ResponseEntity("Successfully deleted movie with id " + id, HttpStatus.OK);
+    } catch (MovieCollectionException e) {
+      return new ResponseEntity(e.getMessage(), HttpStatus.NOT_FOUND);
     }
   }
 

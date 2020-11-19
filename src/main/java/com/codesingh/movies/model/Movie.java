@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import javax.validation.constraints.NotNull;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -17,7 +19,10 @@ public class Movie {
   @Id
   private String id;
 
+  @NotNull(message="Movie title cannot be null")
   private String title;
+  @NotNull(message="Movie title cannot be null")
   private float rating;
+  @NotNull(message="Movie title cannot be null")
   private String genre;
 }
